@@ -33,14 +33,47 @@ const TIER_LABELS = {
 };
 
 const DEFAULT_INSTRUCTION = `[판정 태그 규칙]
+결과가 불확실하고, 실패하면 이야기가 의미 있게 달라지는 도전이 있을 때만 응답 맨 끝에 아래 태그를 한 줄로 남긴다. 두 조건 중 하나라도 아니면 붙이지 않는다.
+<check who="user" action="도전의 내용" dc="숫자" stake="실패하면 벌어질 일"/>
+- who="user": 이번 응답의 장면이 {{user}}에게 도전을 제시했을 때. 판정은 {{user}}의 다음 행동에 적용된다.
+- who="char": {{char}}(또는 NPC)가 결과가 불확실한 행동을 막 시도하려 할 때. 판정은 다음 응답에서 그 행동의 결과에 적용된다. 태그를 붙인 응답에서는 결과를 쓰지 말고 시도 직전에서 멈춘다.
+- dc는 5~25. 행동하는 쪽의 능력·자원은 고려하지 말고 상황 자체의 난이도만으로 정한다. (5 쉬움 / 10 보통 / 15 어려움 / 20 매우 어려움 / 25 거의 불가능)
+- 태그는 한 응답에 최대 1개. 판정 결과를 미리 서술하거나 암시하지 않는다.
+
+판정 O 예시:
+- 경비가 지키는 문 → <check who="user" action="경비 통과" dc="13" stake="발각되어 쫓긴다"/>
+- 화난 상인을 설득해야 함 → <check who="user" action="상인 설득" dc="12" stake="거래가 끊긴다"/>
+- 무너지는 다리, 독이 퍼지는 상처, 쫓아오는 추격자, 경보가 울리기 전 금고 열기
+- {{char}}가 {{user}}에게 거짓말을 하려 함 → <check who="char" action="거짓말 숨기기" dc="12" stake="거짓말이 들통난다"/>
+- NPC가 {{user}}를 기습하려 함 → <check who="char" action="기습" dc="13" stake="공격이 빗나가고 위치가 드러난다"/>
+판정 X 예시:
+- 메뉴 주문, 잠기지 않은 문 열기처럼 실패할 이유가 없음
+- 친한 캐릭터와의 잡담처럼 성공·실패 개념이 없음
+- 고백·데이트 신청에 대한 {{char}}의 반응 (주사위가 아니라 캐릭터성으로 정한다)
+- 시간 여유가 있어 실패해도 다시 하면 그만인 일
+- 전투에서는 매 공격마다 붙이지 말고 흐름을 바꾸는 결정적인 순간에만 붙인다`;
+
+const DEFAULT_RESULT_TEMPLATE = `[주사위 판정 — 이번 응답에서 반드시 따를 것]
+판정: {subject}의 {action} / DC {dc} / 실패 시: {stake}
+주사위(d20 두 개): {d1}, {d2}
+
+{subject}의 이번 행동을 아래 분류 중 하나로 판단하고, 해당 결과를 그대로 따른다.
+분류 근거는 캐릭터 카드, 페르소나, 이전 대화에서 이미 확정된 사실만 인정한다. 이번 턴에 새로 주장하거나 지어낸 능력·자원은 근거가 되지 않는다. 애매하면 '평범'으로 분류한다.
+{outcomes}
+
+결과를 바꾸거나 완화하지 말고, 캐릭터다운 방식으로 서술한다. 주사위 눈이나 DC 같은 수치는 본문에 쓰지 않는다.
+응답 맨 끝에 <judged as="분류" why="근거가 된 확정 사실"/>를 한 줄로 남긴다.`;
+
+// Previous defaults, migrated to the new ones if the user never edited them
+const LEGACY_INSTRUCTIONS = [`[판정 태그 규칙]
 이번 응답의 장면이 {{user}}에게 결과가 불확실한 도전(장애물, 위험, 설득해야 할 상대, 시간 압박 등)을 제시하고, 그 실패가 이야기를 의미 있게 바꾼다면 응답 맨 끝에 아래 태그를 한 줄로 남긴다.
 <check action="도전의 내용" dc="숫자" stake="실패하면 벌어질 일"/>
 - dc는 5~25. {{user}}나 캐릭터의 능력·자원은 고려하지 말고 상황 자체의 난이도만으로 정한다. (5 쉬움 / 10 보통 / 15 어려움 / 20 매우 어려움 / 25 거의 불가능)
 - 일상 행동, 단순 대화, 결과가 뻔한 상황에는 붙이지 않는다. 확신이 없으면 붙이지 않는다.
 - 태그는 한 응답에 최대 1개.
-- 판정 결과를 미리 서술하거나 암시하지 않는다.`;
+- 판정 결과를 미리 서술하거나 암시하지 않는다.`];
 
-const DEFAULT_RESULT_TEMPLATE = `[주사위 판정 — 이번 응답에서 반드시 따를 것]
+const LEGACY_RESULT_TEMPLATES = [`[주사위 판정 — 이번 응답에서 반드시 따를 것]
 판정: {action} / DC {dc} / 실패 시: {stake}
 주사위(d20 두 개): {d1}, {d2}
 
@@ -49,7 +82,7 @@ const DEFAULT_RESULT_TEMPLATE = `[주사위 판정 — 이번 응답에서 반�
 {outcomes}
 
 결과를 바꾸거나 완화하지 말고, 캐릭터다운 방식으로 서술한다. 주사위 눈이나 DC 같은 수치는 본문에 쓰지 않는다.
-응답 맨 끝에 <judged as="분류" why="근거가 된 확정 사실"/>를 한 줄로 남긴다.`;
+응답 맨 끝에 <judged as="분류" why="근거가 된 확정 사실"/>를 한 줄로 남긴다.`];
 
 const DEFAULT_CATEGORY_DESC = {
     overwhelming: '확정된 설정상 사실상 장애물이 되지 않음',
@@ -108,6 +141,8 @@ function getSettings() {
             }
         }
     }
+    if (LEGACY_INSTRUCTIONS.includes(s.instruction)) s.instruction = DEFAULT_INSTRUCTION;
+    if (LEGACY_RESULT_TEMPLATES.includes(s.resultTemplate)) s.resultTemplate = DEFAULT_RESULT_TEMPLATE;
     return s;
 }
 
@@ -150,6 +185,7 @@ function parseCheck(text) {
     const dc = parseInt(attrs.dc, 10);
     if (!Number.isFinite(dc)) return null;
     return {
+        who: String(attrs.who ?? '').toLowerCase() === 'char' ? 'char' : 'user',
         action: attrs.action || '도전',
         dc: Math.max(1, Math.min(30, dc)),
         stake: attrs.stake || '상황이 나빠진다',
@@ -226,6 +262,7 @@ function buildResultPrompt(roll, s) {
         return `- ${c.label}${desc} → ${describeOutcome(c.key, roll, s).text}`;
     });
     return fill(s.resultTemplate, {
+        subject: roll.who === 'char' ? '{{char}}' : '{{user}}',
         action: roll.action,
         dc: roll.dc,
         stake: roll.stake,
@@ -244,9 +281,32 @@ function findLastIndex(arr, pred, from = arr.length - 1) {
     return -1;
 }
 
-/** Finds the <check/> tag in the AI message(s) right before the given user message. */
-function findSourceCheck(chat, userIdx) {
-    for (let i = userIdx - 1; i >= 0; i--) {
+const isVisible = m => m && !m.is_system;
+
+/**
+ * The anchor is the message the upcoming reply responds to. Rolls are stored on it,
+ * so swipes and continues of the same reply reuse the same dice.
+ */
+function findAnchorIndex(chat, type) {
+    const last = findLastIndex(chat, isVisible);
+    if (last < 0) return -1;
+    if (type === 'swipe' || type === 'continue') return findLastIndex(chat, isVisible, last - 1);
+    return last;
+}
+
+/**
+ * Finds the <check/> that applies to the reply after the anchor.
+ * - Anchor is a user message: the check in the AI message(s) right before it (user or char check).
+ * - Anchor is an AI message (generation without user input): only a char check on that message.
+ */
+function findSourceCheck(chat, anchorIdx) {
+    const anchor = chat[anchorIdx];
+    if (!anchor) return null;
+    if (!anchor.is_user) {
+        const check = parseCheck(anchor.mes);
+        return check?.who === 'char' ? { index: anchorIdx, ...check } : null;
+    }
+    for (let i = anchorIdx - 1; i >= 0; i--) {
         const m = chat[i];
         if (!m) continue;
         if (m.is_user) break;
@@ -257,35 +317,35 @@ function findSourceCheck(chat, userIdx) {
     return null;
 }
 
-function isOnCooldown(chat, userIdx, cooldown) {
+/** True if a roll happened within the last `cooldown` user turns before the anchor. */
+function isOnCooldown(chat, anchorIdx, cooldown) {
     if (!cooldown || cooldown <= 0) return false;
-    let seen = 0;
-    for (let i = userIdx - 1; i >= 0 && seen < cooldown; i--) {
+    let userTurns = 0;
+    for (let i = anchorIdx - 1; i >= 0; i--) {
         const m = chat[i];
-        if (!m?.is_user || m.is_system) continue;
-        seen++;
+        if (!isVisible(m)) continue;
         if (m.extra?.[MODULE]) return true;
+        if (m.is_user && ++userTurns >= cooldown) break;
     }
     return false;
 }
 
 /**
  * Returns the roll that applies to the upcoming generation, rolling new dice if needed.
- * The roll is stored on the latest user message so swipes reuse it.
  */
 function resolveRoll(chat, type, s) {
-    const userIdx = findLastIndex(chat, m => m?.is_user && !m.is_system);
-    if (userIdx < 0) return null;
-    const userMsg = chat[userIdx];
+    const anchorIdx = findAnchorIndex(chat, type);
+    if (anchorIdx < 0) return null;
+    const anchor = chat[anchorIdx];
     const state = getChatState();
-    let roll = userMsg.extra?.[MODULE] ?? null;
+    let roll = anchor.extra?.[MODULE] ?? null;
 
     if (roll) {
         // Keep check info in sync if the user edited the tag; drop the roll if the tag was removed
         if (typeof roll.source === 'number') {
             const check = parseCheck(chat[roll.source]?.mes);
             if (!check) {
-                delete userMsg.extra[MODULE];
+                delete anchor.extra[MODULE];
                 return null;
             }
             Object.assign(roll, check);
@@ -294,9 +354,9 @@ function resolveRoll(chat, type, s) {
         if (s.rerollOnSwipe && isReroll) {
             roll.d1 = rollD20();
             roll.d2 = rollD20();
-            return { roll, userIdx, fresh: true };
+            return { roll, anchorIdx, fresh: true };
         }
-        return { roll, userIdx, fresh: false };
+        return { roll, anchorIdx, fresh: false };
     }
 
     let check = null;
@@ -307,15 +367,16 @@ function resolveRoll(chat, type, s) {
         delete state.manual;
         saveChatState();
     } else {
-        const found = findSourceCheck(chat, userIdx);
+        const found = findSourceCheck(chat, anchorIdx);
         if (!found) return null;
         if (state.cancelled === found.index) return null;
-        if (isOnCooldown(chat, userIdx, Number(s.cooldown))) return null;
+        if (isOnCooldown(chat, anchorIdx, Number(s.cooldown))) return null;
         check = found;
         source = found.index;
     }
 
     roll = {
+        who: check.who ?? 'user',
         action: check.action,
         dc: check.dc,
         stake: check.stake,
@@ -323,9 +384,9 @@ function resolveRoll(chat, type, s) {
         d2: rollD20(),
         source,
     };
-    userMsg.extra = userMsg.extra ?? {};
-    userMsg.extra[MODULE] = roll;
-    return { roll, userIdx, fresh: true };
+    anchor.extra = anchor.extra ?? {};
+    anchor.extra[MODULE] = roll;
+    return { roll, anchorIdx, fresh: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -368,17 +429,17 @@ globalThis.diceplotInterceptor = async function (coreChat, _contextSize, _abort,
     // 3. Roll and inject the result at the very bottom
     const resolved = resolveRoll(ctx.chat, type, s);
     if (!resolved) return;
-    const { roll, userIdx, fresh } = resolved;
+    const { roll, anchorIdx, fresh } = resolved;
 
     ctx.setExtensionPrompt(KEY_RESULT, buildResultPrompt(roll, s), PROMPT_POSITION.IN_CHAT, 0, false, PROMPT_ROLE_SYSTEM);
 
     if (fresh) {
         try { ctx.saveChat?.(); } catch (e) { console.warn(`[${MODULE}] save failed`, e); }
         if (s.showToast) {
-            toastr.info(`${roll.action} · DC ${roll.dc}`, `🎲 d20: ${roll.d1} / ${roll.d2}`, { timeOut: 4000 });
+            toastr.info(`${subjectLabel(roll)} ${roll.action} · DC ${roll.dc}`, `🎲 d20: ${roll.d1} / ${roll.d2}`, { timeOut: 4000 });
         }
     }
-    renderBadge(userIdx);
+    renderBadge(anchorIdx);
 };
 
 // ---------------------------------------------------------------------------
@@ -405,45 +466,47 @@ function hideTagsInDom(mesTextEl) {
     if (cleaned !== html) mesTextEl.innerHTML = cleaned;
 }
 
-function findRollBefore(chat, aiIdx) {
-    for (let i = aiIdx - 1; i >= 0; i--) {
-        const m = chat[i];
-        if (m?.is_user && !m.is_system) return m.extra?.[MODULE] ?? null;
-    }
-    return null;
+function subjectLabel(rollOrCheck) {
+    const { name1, name2 } = SillyTavern.getContext();
+    return rollOrCheck?.who === 'char' ? (name2 || '캐릭터') : (name1 || '유저');
+}
+
+/** The roll a reply used is stored on the message right before it. */
+function findRollBefore(chat, idx) {
+    const prev = findLastIndex(chat, isVisible, idx - 1);
+    return prev >= 0 ? chat[prev].extra?.[MODULE] ?? null : null;
 }
 
 function badgeLines(chat, idx) {
     const msg = chat[idx];
-    if (!msg || msg.is_system) return [];
+    if (!isVisible(msg)) return [];
     const s = getSettings();
     const lines = [];
 
-    if (msg.is_user) {
-        const roll = msg.extra?.[MODULE];
-        if (roll) lines.push(`🎲 ${roll.action} · DC ${roll.dc} · d20: ${roll.d1} / ${roll.d2}`);
-        return lines;
-    }
-
-    const judged = parseJudged(msg.mes);
-    if (judged) {
-        const roll = findRollBefore(chat, idx);
-        const label = CATEGORIES.find(c => c.key === judged.category)?.label ?? '알 수 없음';
-        let text = `⚖️ ${label}`;
-        if (roll && judged.category) {
-            const outcome = describeOutcome(judged.category, roll, s);
-            if (outcome.die != null) text += ` → ${outcome.die} vs DC ${roll.dc}`;
-            if (outcome.tier) text += ` → ${TIER_LABELS[outcome.tier]}`;
+    if (!msg.is_user) {
+        const judged = parseJudged(msg.mes);
+        if (judged) {
+            const roll = findRollBefore(chat, idx);
+            const label = CATEGORIES.find(c => c.key === judged.category)?.label ?? '알 수 없음';
+            let text = `⚖️ ${label}`;
+            if (roll && judged.category) {
+                const outcome = describeOutcome(judged.category, roll, s);
+                if (outcome.die != null) text += ` → ${outcome.die} vs DC ${roll.dc}`;
+                if (outcome.tier) text += ` → ${TIER_LABELS[outcome.tier]}`;
+            }
+            if (judged.why) text += ` · ${judged.why}`;
+            lines.push(text);
         }
-        if (judged.why) text += ` · ${judged.why}`;
-        lines.push(text);
+
+        const check = parseCheck(msg.mes);
+        if (check) {
+            const cancelled = getChatState().cancelled === idx;
+            lines.push(`🎯 ${cancelled ? '(취소됨) ' : ''}판정 대기: ${subjectLabel(check)} · ${check.action} · DC ${check.dc} · 실패 시: ${check.stake}`);
+        }
     }
 
-    const check = parseCheck(msg.mes);
-    if (check) {
-        const cancelled = getChatState().cancelled === idx;
-        lines.push(`🎯 ${cancelled ? '(취소됨) ' : ''}판정 대기: ${check.action} · DC ${check.dc} · 실패 시: ${check.stake}`);
-    }
+    const roll = msg.extra?.[MODULE];
+    if (roll) lines.push(`🎲 ${subjectLabel(roll)} · ${roll.action} · DC ${roll.dc} · d20: ${roll.d1} / ${roll.d2}`);
     return lines;
 }
 
@@ -489,10 +552,11 @@ function registerCommands() {
 
     SlashCommandParser.addCommandObject(SlashCommand.fromProps({
         name: 'dp-check',
-        helpString: '<div>다음 생성에 판정을 강제로 겁니다. 예: <code>/dp-check dc=13 stake="경비에게 발각" 담 넘기</code></div>',
+        helpString: '<div>다음 생성에 판정을 강제로 겁니다. 예: <code>/dp-check dc=13 stake="경비에게 발각" 담 넘기</code>, 캐릭터 판정은 <code>who=char</code></div>',
         namedArgumentList: [
             SlashCommandNamedArgument.fromProps({ name: 'dc', description: '난이도 (5~25)', typeList: [ARGUMENT_TYPE.NUMBER], isRequired: true }),
             SlashCommandNamedArgument.fromProps({ name: 'stake', description: '실패 시 벌어질 일', typeList: [ARGUMENT_TYPE.STRING] }),
+            SlashCommandNamedArgument.fromProps({ name: 'who', description: 'user 또는 char (기본 user)', typeList: [ARGUMENT_TYPE.STRING], enumList: ['user', 'char'] }),
         ],
         unnamedArgumentList: [
             SlashCommandArgument.fromProps({ description: '도전 내용', typeList: [ARGUMENT_TYPE.STRING] }),
@@ -504,6 +568,7 @@ function registerCommands() {
                 return '';
             }
             getChatState().manual = {
+                who: String(args.who ?? '').toLowerCase() === 'char' ? 'char' : 'user',
                 action: String(value ?? '').trim() || '도전',
                 dc: Math.max(1, Math.min(30, dc)),
                 stake: String(args.stake ?? '').trim() || '상황이 나빠진다',
@@ -521,17 +586,25 @@ function registerCommands() {
             const { chat } = SillyTavern.getContext();
             const state = getChatState();
             delete state.manual;
-            const userIdx = findLastIndex(chat, m => m?.is_user && !m.is_system);
-            const lastIdx = chat.length - 1;
-            // Pending check on the latest AI message (user hasn't replied yet)
-            const pending = chat[lastIdx] && !chat[lastIdx].is_user && parseCheck(chat[lastIdx].mes) ? lastIdx : null;
-            if (pending !== null) {
-                state.cancelled = pending;
-            } else if (userIdx >= 0) {
-                const roll = chat[userIdx].extra?.[MODULE];
-                if (typeof roll?.source === 'number') state.cancelled = roll.source;
-                if (chat[userIdx].extra) delete chat[userIdx].extra[MODULE];
-                SillyTavern.getContext().saveChat?.();
+            const lastIdx = findLastIndex(chat, isVisible);
+            const last = chat[lastIdx];
+            if (last && !last.is_user && parseCheck(last.mes) && !last.extra?.[MODULE]) {
+                // Check announced but not rolled yet
+                state.cancelled = lastIdx;
+            } else {
+                // Undo the most recent roll (back to the latest user message)
+                for (let i = lastIdx; i >= 0; i--) {
+                    const m = chat[i];
+                    if (!isVisible(m)) continue;
+                    const roll = m.extra?.[MODULE];
+                    if (roll) {
+                        if (typeof roll.source === 'number') state.cancelled = roll.source;
+                        delete m.extra[MODULE];
+                        SillyTavern.getContext().saveChat?.();
+                        break;
+                    }
+                    if (m.is_user) break;
+                }
             }
             saveChatState();
             renderAllBadges();
@@ -598,7 +671,7 @@ function settingsHtml(s) {
 
                 <hr />
                 <b>결과 주입 템플릿</b>
-                <small>사용 가능: {action} {dc} {stake} {d1} {d2} {outcomes}</small>
+                <small>사용 가능: {subject} {action} {dc} {stake} {d1} {d2} {outcomes}</small>
                 <textarea class="text_pole textarea_compact" rows="8" data-dp-path="resultTemplate"></textarea>
 
                 <b>분류 기준</b>

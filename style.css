@@ -44,3 +44,7 @@
 .diceplot-inline input[type="number"] {
     width: 5em;
 }
+
+#diceplot_wand.diceplot-off {
+    opacity: 0.5;
+}

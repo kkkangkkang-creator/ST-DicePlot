@@ -41,7 +41,7 @@ Only when a challenge is uncertain AND failure would meaningfully change the sto
 - who="char": {{char}} (or an NPC) is about to attempt something with an uncertain outcome. The check resolves in the next response. In the response that adds this tag, stop right before the attempt and do not narrate its result.
 - dc is 5-25, based only on how difficult the situation itself is. Ignore the abilities or resources of whoever acts. (5 easy / 10 moderate / 15 hard / 20 very hard / 25 nearly impossible)
 - At most one tag per response. Never narrate or hint at the outcome in advance.
-- Write action and stake in the same language as the story.
+- IMPORTANT: Write the values of action and stake in the same language the story is written in (e.g. Korean if the story is in Korean). The example values below are in English only for illustration; never copy their language.
 
 Use a check:
 - A guarded door → <check who="user" action="get past the guard" dc="13" stake="spotted and chased"/>
@@ -483,12 +483,12 @@ function badgeLines(chat, idx) {
         const check = parseCheck(msg.mes);
         if (check) {
             const cancelled = getChatState().cancelled === idx;
-            lines.push(`🎯 ${cancelled ? '(취소됨) ' : ''}판정 대기: ${subjectLabel(check)} · ${check.action} · DC ${check.dc} · 실패 시: ${check.stake}`);
+            lines.push(`🎯 ${cancelled ? '(취소됨) ' : ''}${subjectLabel(check)}의 판정 대기 · ${check.action} · DC ${check.dc} · 실패 시: ${check.stake}`);
         }
     }
 
     const roll = msg.extra?.[MODULE];
-    if (roll) lines.push(`🎲 ${subjectLabel(roll)} · ${roll.action} · DC ${roll.dc} · d20: ${roll.d1} / ${roll.d2}`);
+    if (roll) lines.push(`🎲 ${subjectLabel(roll)}의 판정 · ${roll.action} · DC ${roll.dc} · 주사위: ${roll.d1} / ${roll.d2}`);
     return lines;
 }
 

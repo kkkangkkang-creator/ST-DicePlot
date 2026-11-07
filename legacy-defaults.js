@@ -1,7 +1,27 @@
 // Previous (Korean) prompt defaults. Saved settings that still equal one of these
 // were never edited by the user, so they are upgraded to the current defaults.
 
-export const LEGACY_INSTRUCTIONS = [`[판정 태그 규칙]
+export const LEGACY_INSTRUCTIONS = [`[Dice Check Tag Rules]
+Only when a challenge is uncertain AND failure would meaningfully change the story, end your response with the tag below on its own line. If either condition is missing, do not add it.
+<check who="user" action="what is being attempted" dc="number" stake="what happens on failure"/>
+- who="user": the scene presents a challenge to {{user}}. The check applies to {{user}}'s next action.
+- who="char": {{char}} (or an NPC) is about to attempt something with an uncertain outcome. The check resolves in the next response. In the response that adds this tag, stop right before the attempt and do not narrate its result.
+- dc is 5-25, based only on how difficult the situation itself is. Ignore the abilities or resources of whoever acts. (5 easy / 10 moderate / 15 hard / 20 very hard / 25 nearly impossible)
+- At most one tag per response. Never narrate or hint at the outcome in advance.
+- Write action and stake in the same language as the story.
+
+Use a check:
+- A guarded door → <check who="user" action="get past the guard" dc="13" stake="spotted and chased"/>
+- An angry merchant must be persuaded → <check who="user" action="persuade the merchant" dc="12" stake="the deal falls through"/>
+- A collapsing bridge, a spreading poison, a pursuer closing in, cracking a safe before the alarm goes off
+- {{char}} is about to lie to {{user}} → <check who="char" action="hide the lie" dc="12" stake="the lie is exposed"/>
+- An NPC is about to ambush {{user}} → <check who="char" action="ambush" dc="13" stake="the attack misses and their position is revealed"/>
+Do not use a check:
+- There is no reason to fail, like ordering food or opening an unlocked door
+- There is no success or failure involved, like small talk with a friend
+- {{char}}'s reaction to a confession or a date invitation (decide by personality, not dice)
+- It can simply be retried with no time pressure
+- In combat, not on every attack; only at decisive moments that turn the fight`, `[판정 태그 규칙]
 이번 응답의 장면이 {{user}}에게 결과가 불확실한 도전(장애물, 위험, 설득해야 할 상대, 시간 압박 등)을 제시하고, 그 실패가 이야기를 의미 있게 바꾼다면 응답 맨 끝에 아래 태그를 한 줄로 남긴다.
 <check action="도전의 내용" dc="숫자" stake="실패하면 벌어질 일"/>
 - dc는 5~25. {{user}}나 캐릭터의 능력·자원은 고려하지 말고 상황 자체의 난이도만으로 정한다. (5 쉬움 / 10 보통 / 15 어려움 / 20 매우 어려움 / 25 거의 불가능)

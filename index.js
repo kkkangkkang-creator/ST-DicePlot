@@ -41,7 +41,7 @@ Only when a challenge is uncertain AND failure would meaningfully change the sto
 - who="char": {{char}} (or an NPC) is about to attempt something with an uncertain outcome. The check resolves in the next response. In the response that adds this tag, stop right before the attempt and do not narrate its result.
 - dc is 5-25, based only on how difficult the situation itself is. Ignore the abilities or resources of whoever acts. (5 easy / 10 moderate / 15 hard / 20 very hard / 25 nearly impossible)
 - At most one tag per response. Never narrate or hint at the outcome in advance.
-- IMPORTANT: Write the values of action and stake in the same language the story is written in (e.g. Korean if the story is in Korean). The example values below are in English only for illustration; never copy their language.
+- Write the values of action and stake in English.
 
 Use a check:
 - A guarded door → <check who="user" action="get past the guard" dc="13" stake="spotted and chased"/>
@@ -293,6 +293,8 @@ function findSourceCheck(chat, anchorIdx) {
         if (!m) continue;
         if (m.is_user) break;
         if (m.is_system) continue;
+        // A roll stored here means the checks up to this point were already resolved (e.g. by an empty send)
+        if (m.extra?.[MODULE]) break;
         const check = parseCheck(m.mes);
         if (check) return { index: i, ...check };
     }

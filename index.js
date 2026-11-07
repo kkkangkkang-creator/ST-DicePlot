@@ -83,6 +83,10 @@ const DEFAULT_TIER_TEXT = {
     fumble: 'Critical failure. Fails, and the situation gets significantly worse: {stake}',
 };
 
+const IMPERSONATE_NOTE = `[Dice Check pending]
+{{user}} faces a check: {action} (on failure: {stake}).
+Write only {{user}}'s attempt. Do not narrate whether it succeeds or fails; dice decide that in the next response.`;
+
 const OVERWHELMING_TEXT = 'Automatic success. No roll needed.';
 const IRRELEVANT_TEXT = 'Ignore this check and continue naturally.';
 
@@ -92,6 +96,7 @@ const defaultSettings = Object.freeze({
     showBadges: true,
     showToast: true,
     rerollOnSwipe: false,
+    aiPlaysUser: false,
     partialMargin: 4,
     cooldown: 0,
     instructionPosition: 'chat', // 'chat' | 'prompt'
@@ -279,14 +284,17 @@ function findAnchorIndex(chat, type) {
 /**
  * Finds the <check/> that applies to the reply after the anchor.
  * - Anchor is a user message: the check in the AI message(s) right before it (user or char check).
- * - Anchor is an AI message (generation without user input): only a char check on that message.
+ * - Anchor is an AI message (generation without user input): only a char check on that message,
+ *   or any check when the AI also writes {{user}}'s actions (aiPlaysUser).
  */
-function findSourceCheck(chat, anchorIdx) {
+function findSourceCheck(chat, anchorIdx, s) {
     const anchor = chat[anchorIdx];
     if (!anchor) return null;
     if (!anchor.is_user) {
+        // Without user input only char checks resolve, unless the AI also writes {{user}}'s actions
         const check = parseCheck(anchor.mes);
-        return check?.who === 'char' ? { index: anchorIdx, ...check } : null;
+        const resolvesNow = check?.who === 'char' || (check && s?.aiPlaysUser);
+        return resolvesNow ? { index: anchorIdx, ...check } : null;
     }
     for (let i = anchorIdx - 1; i >= 0; i--) {
         const m = chat[i];
@@ -297,6 +305,19 @@ function findSourceCheck(chat, anchorIdx) {
         if (m.extra?.[MODULE]) break;
         const check = parseCheck(m.mes);
         if (check) return { index: i, ...check };
+    }
+    return null;
+}
+
+/** A user check announced at the end of the chat that no user message has answered yet. */
+function findPendingUserCheck(chat) {
+    const state = getChatState();
+    for (let i = chat.length - 1; i >= 0; i--) {
+        const m = chat[i];
+        if (!isVisible(m)) continue;
+        if (m.is_user || m.extra?.[MODULE]) return null;
+        const check = parseCheck(m.mes);
+        if (check) return check.who === 'user' && state.cancelled !== i ? check : null;
     }
     return null;
 }
@@ -351,7 +372,7 @@ function resolveRoll(chat, type, s) {
         delete state.manual;
         saveChatState();
     } else {
-        const found = findSourceCheck(chat, anchorIdx);
+        const found = findSourceCheck(chat, anchorIdx, s);
         if (!found) return null;
         if (state.cancelled === found.index) return null;
         if (isOnCooldown(chat, anchorIdx, Number(s.cooldown))) return null;
@@ -387,9 +408,19 @@ globalThis.diceplotInterceptor = async function (coreChat, _contextSize, _abort,
     clearPrompts();
     const s = getSettings();
     if (!s.enabled) return;
-    if (type === 'quiet' || type === 'impersonate') return;
+    if (type === 'quiet') return;
 
     const ctx = SillyTavern.getContext();
+
+    if (type === 'impersonate') {
+        // The AI is writing {{user}}'s message: keep tags out and stop it from deciding a pending check
+        for (const m of coreChat) if (typeof m?.mes === 'string') m.mes = stripTags(m.mes);
+        const pending = findPendingUserCheck(ctx.chat);
+        if (pending) {
+            ctx.setExtensionPrompt(KEY_RESULT, fill(IMPERSONATE_NOTE, pending), PROMPT_POSITION.IN_CHAT, 0, false, PROMPT_ROLE_SYSTEM);
+        }
+        return;
+    }
 
     // 1. The rule that tells the AI when to emit <check/>
     const instructionInChat = s.instructionPosition !== 'prompt';
@@ -669,6 +700,7 @@ function settingsHtml(s) {
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="showBadges" /><span>판정 배지 표시</span></label>
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="showToast" /><span>굴릴 때 알림 표시</span></label>
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="rerollOnSwipe" /><span>스와이프/재생성 시 다시 굴리기</span></label>
+                <label class="checkbox_label" title="AI가 유저 행동까지 직접 쓰는 방식일 때 켜세요. 입력 없이 보내도 유저 판정을 바로 굴립니다."><input type="checkbox" data-dp-path="aiPlaysUser" /><span>AI가 유저 행동도 씀 (입력 없이도 유저 판정 굴림)</span></label>
 
                 <label class="diceplot-row">
                     <span>부분 성공 범위 (DC보다 이만큼 낮아도 부분 성공)</span>

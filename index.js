@@ -35,26 +35,14 @@ const TIER_LABELS = {
 };
 
 const DEFAULT_INSTRUCTION = `[Dice Check Tag Rules]
-Only when a challenge is uncertain AND failure would meaningfully change the story, end your response with the tag below on its own line. If either condition is missing, do not add it.
-<check who="user" action="what is being attempted" dc="number" stake="what happens on failure"/>
-- who="user": the scene presents a challenge to {{user}}. The check applies to {{user}}'s next action.
-- who="char": {{char}} (or an NPC) is about to attempt something with an uncertain outcome. The check resolves in the next response. In the response that adds this tag, stop right before the attempt and do not narrate its result.
-- dc is 5-25, based only on how difficult the situation itself is. Ignore the abilities or resources of whoever acts. (5 easy / 10 moderate / 15 hard / 20 very hard / 25 nearly impossible)
-- At most one tag per response. Never narrate or hint at the outcome in advance.
-- Write the values of action and stake in English.
+Only when an action's outcome is uncertain AND failure would meaningfully change the story, append this tag on a new line at the very end of your response:
+<check who="user" action="..." dc="number" stake="what happens on failure"/>
+Max one tag per reply. Never hint at or narrate the outcome in advance. Write action and stake in English.
 
-Use a check:
-- A guarded door → <check who="user" action="get past the guard" dc="13" stake="spotted and chased"/>
-- An angry merchant must be persuaded → <check who="user" action="persuade the merchant" dc="12" stake="the deal falls through"/>
-- A collapsing bridge, a spreading poison, a pursuer closing in, cracking a safe before the alarm goes off
-- {{char}} is about to lie to {{user}} → <check who="char" action="hide the lie" dc="12" stake="the lie is exposed"/>
-- An NPC is about to ambush {{user}} → <check who="char" action="ambush" dc="13" stake="the attack misses and their position is revealed"/>
-Do not use a check:
-- There is no reason to fail, like ordering food or opening an unlocked door
-- There is no success or failure involved, like small talk with a friend
-- {{char}}'s reaction to a confession or a date invitation (decide by personality, not dice)
-- It can simply be retried with no time pressure
-- In combat, not on every attack; only at decisive moments that turn the fight`;
+- who="user": the scene puts a challenge in front of {{user}}'s next action. e.g. <check who="user" action="get past the guard" dc="13" stake="spotted and chased"/>
+- who="char": {{char}} or an NPC is about to attempt something uncertain. e.g. <check who="char" action="hide the lie" dc="12" stake="the lie is exposed"/> Stop right before the attempt; it resolves next turn.
+- dc: difficulty of the situation only; ignore the abilities and resources of whoever acts (5 easy / 10 moderate / 15 hard / 20 very hard / 25 nearly impossible).
+- Skip: routine actions, small talk, tasks retryable without time pressure, social/romantic reactions decided by personality, ordinary combat exchanges (use only at decisive turning points).`;
 
 const DEFAULT_RESULT_TEMPLATE = `[Dice Check — follow this in the current response]
 Check: {subject} — {action} / DC {dc} / On failure: {stake}

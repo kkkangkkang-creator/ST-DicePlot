@@ -682,7 +682,8 @@ function settingsHtml(s) {
                 <b>🎲 DicePlot</b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
             </div>
-            <div class="inline-drawer-content diceplot-settings">
+            <div class="inline-drawer-content">
+            <div class="diceplot-settings">
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="enabled" /><span>사용</span></label>
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="hideTags" /><span>채팅 화면에서 태그 숨기기</span></label>
                 <label class="checkbox_label"><input type="checkbox" data-dp-path="showBadges" /><span>판정 배지 표시</span></label>
@@ -726,6 +727,7 @@ function settingsHtml(s) {
                 <div class="diceplot-inline">
                     <div id="diceplot_reset" class="menu_button">문구를 기본값으로 되돌리기</div>
                 </div>
+            </div>
             </div>
         </div>
     </div>`;
